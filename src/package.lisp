@@ -1,11 +1,11 @@
 #|
-  This file is a part of mate-zdd project.
+  This file is a part of simpath project.
   Copyright (c) 2017 Masataro Asai (guicho2.71828@gmail.com)
 |#
 
 (in-package :cl-user)
-(defpackage mate-zdd
+(defpackage simpath
   (:use :cl :trivia :cl-cudd :alexandria :iterate))
-(in-package :mate-zdd)
+(in-package :simpath)
 
 ;; blah blah blah.

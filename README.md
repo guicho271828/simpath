@@ -1,5 +1,9 @@
 
-# Mate-Zdd - implementation of mate-zdd, a path enumeration algorithm
+# simpath - implementation of simpath, a path enumeration algorithm
+
+http://www-erato.ist.hokudai.ac.jp/wiki/wiki.cgi?page=ERATO%2Dseminar&file=kawahara%2Epdf&action=ATTACH
+
+
 
 ## Usage
 

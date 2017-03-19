@@ -1,24 +1,24 @@
 #|
-  This file is a part of mate-zdd project.
+  This file is a part of simpath project.
   Copyright (c) 2017 Masataro Asai (guicho2.71828@gmail.com)
 |#
 
 (in-package :cl-user)
-(defpackage :mate-zdd.test
+(defpackage :simpath.test
   (:use :cl
-        :mate-zdd
+        :simpath
         :fiveam
         :trivia :cl-cudd :alexandria :iterate))
-(in-package :mate-zdd.test)
+(in-package :simpath.test)
 
 
 
-(def-suite :mate-zdd)
-(in-suite :mate-zdd)
+(def-suite :simpath)
+(in-suite :simpath)
 
 ;; run test with (run! test-name) 
 
-(test mate-zdd
+(test simpath
 
   )
 
