@@ -77,12 +77,6 @@
                   (for x below size)
                   (iter (for y below size)
                         (in outer
-                            (unless (= 0 x)
-                              (collect (cons (node x y) (node (1- x) y))
-                                result-type vector))
-                            (unless (= 0 y)
-                              (collect (cons (node x y) (node x (1- y)))
-                                result-type vector))
                             (unless (= x (1- size))
                               (collect (cons (node x y) (node (1+ x) y))
                                 result-type vector))
