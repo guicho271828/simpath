@@ -1,9 +1,9 @@
 
 # simpath - implementation of simpath, a path enumeration algorithm
 
-http://www-erato.ist.hokudai.ac.jp/wiki/wiki.cgi?page=ERATO%2Dseminar&file=kawahara%2Epdf&action=ATTACH
-
-
+D. E. Knuth, The Art of Computer Programming:
+Bitwise Tricks & Techniques; Binary Decision Dia-
+grams, Vol. 4, fascicle 1, Addison-Wesley, 2009.
 
 ## Usage
 
