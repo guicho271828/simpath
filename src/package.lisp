@@ -5,7 +5,8 @@
 
 (in-package :cl-user)
 (defpackage simpath
-  (:use :cl :trivia :cl-cudd :alexandria :iterate))
+  (:shadow :<>)
+  (:use :cl :trivia :cl-cudd :alexandria :iterate :arrow-macros))
 (in-package :simpath)
 
 ;; blah blah blah.
@@ -93,4 +94,116 @@
              (setf (gethash from h) from
                    (gethash to h) to))
        (hash-table-keys h)))))
+
+;; (defun simpath (input)
+;;   (match input
+;;     ((input s t edges)
+;;      (with-manager (:initial-num-vars-z (length edges))
+;;        (iter (for e in-vector edges with-index i)
+;;              (for var = (make-var 'zdd-node :index i))
+;;              ;; the details of branch pruning is not specified...
+
+(defmacro with-renaming (bindings &body body)
+  (iter (for (old new) in bindings)
+        (setf body (subst new old body :test #'equalp)))
+  `(progn ,@body))
+
+(defun test (a b)
+  (* a b)
+  #+nil
+  (flet ((* (a b) (+ a b)))
+    (* a b))
+  #+nil
+  (macrolet ((* (a b) `(+ ,a ,b)))
+    (* a b))
+  #+nil
+  (symbol-macrolet ((* +))
+    (* a b))
+  (with-renaming ((* +))
+    (* a b)))
+
+(defconstant +new+ 0)
+(defconstant +frontier+ 1)
+(defconstant +closed+ 2)
+
+(defun dump (path name f)
+  (cl-cudd.baseapi:dump-dot
+   (manager-pointer *manager*)
+   (cl-cudd.baseapi:cudd-regular (node-pointer f))
+   (namestring (make-pathname :name name :type "dot" :defaults path))))
+(defun dump-zdd (path name f)
+  (cl-cudd.baseapi:zdd-dump-dot
+   (manager-pointer *manager*)
+   (cl-cudd.baseapi:cudd-regular (node-pointer f))
+   (namestring (make-pathname :name name :type "dot" :defaults path))))
+
+(defun draw (f)
+  (dump-zdd "." "dump" f)
+  (uiop:run-program (format nil "dot dump.dot -Tpdf -o dump.pdf")))
+
+(defmacro break+ (&rest args)
+  (let* ((last-form (lastcar args))
+         (last last-form)
+         (butlast (butlast args)))
+    (once-only (last)
+      `(progn
+         (break "~@{~a~%~<;;~@; -> ~4i~:@_~a~;~:>~2%~}"
+                ,@(iter (for arg in butlast)
+                        (collect `',arg)
+                        (collect `(list ,arg)))
+                ',last-form (list ,last))
+         ,last))))
+
+(defun mate-zdd (input)
+  (ematch input
+    ((input :s start :t terminal :edges edges)
+     (let ((%edges (length edges))
+           (%nodes (length (nodes input))))
+       (flet ((m (v1 v2) (zdd-singleton (+ (* %nodes v1) v2)))
+              (e (h)     (zdd-singleton (+ (* %nodes %nodes) h))))
+         (with-manager (:initial-num-vars-z (+ (* %nodes %nodes) %edges))
+           (let ((f (zdd-set-of-emptyset))
+                 ;; frontier := visited nodes / closed nodes
+                 (states (make-array %nodes
+                                     :element-type 'fixnum
+                                     :initial-element +new+)))
+             (with-renaming ((+ zdd-union)
+                             (* zdd-product-unate)
+                             (/ zdd-divide-unate)
+                             (! zdd-change)
+                             (% zdd-remainder-unate)
+                             (_+ +)
+                             (_* *))
+               (iter (for i below %nodes)
+                     (draw f)
+                     (break+ f i %nodes)
+                     ;; (setf f (* f (_+ (_* %nodes i) i)))
+                     (setf f (! f (_+ (_* %nodes i) i))))
+               (iter (for (i . j) in-vector edges with-index h)
+                     (for _i previous i)
+                     (setf (aref states i) +frontier+)
+                     (setf (aref states j) +frontier+)
+                     (unless (first-iteration-p)
+                       (when (/= i _i)  ; i.e., i is a new node
+                         (setf (aref states _i) +closed+)))
+                     (iter (for s in-vector states with-index k)
+                           (unless (= s +frontier+) (next-iteration))
+                           (iter (for s in-vector states with-index l from (1+ k))
+                                 (unless (= s +frontier+) (next-iteration))
+                                 (setf f
+                                       (+ f (-> f
+                                              (* (e h))
+                                              (/ (m i k))
+                                              (/ (m j l))
+                                              (* (m k l)))))))
+                     (iter (for s in-vector states with-index p)
+                           (unless (= s +closed+) (next-iteration))
+                           (iter (for s in-vector states with-index k)
+                                 (unless (= s +frontier+) (next-iteration))
+                                 (when (/= k p)
+                                   (setf f (% f (m p k)))))
+                           (setf f (+ (/ f (m p p))
+                                      (% f (m p p))))))
+               (setf f (/ f (m start terminal))))
+             (zdd-count-minterm f))))))))
 

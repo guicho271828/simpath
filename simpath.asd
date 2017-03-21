@@ -24,7 +24,7 @@
   :bug-tracker "https://github.com/guicho271828/simpath/issues"
   :source-control (:git "https://github.com/guicho271828/simpath.git")
   :license "LLGPL"
-  :depends-on (:trivia :cl-cudd :alexandria :iterate)
+  :depends-on (:trivia :cl-cudd :alexandria :iterate :arrow-macros)
   :components ((:module "src"
                 :components
                 ((:file "package"))))
