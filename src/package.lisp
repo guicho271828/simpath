@@ -104,8 +104,13 @@
 ;;              ;; the details of branch pruning is not specified...
 
 (defmacro with-renaming (bindings &body body)
-  (iter (for (old new) in bindings)
-        (setf body (subst new old body :test #'equalp)))
+  (let ((tmps (make-gensym-list (length bindings))))
+    (iter (for (old new) in bindings)
+          (for tmp in tmps)
+          (setf body (subst tmp old body :test #'equalp)))
+    (iter (for (old new) in bindings)
+          (for tmp in tmps)
+          (setf body (subst new tmp body :test #'equalp))))
   `(progn ,@body))
 
 (defun test (a b)
@@ -119,8 +124,10 @@
   #+nil
   (symbol-macrolet ((* +))
     (* a b))
-  (with-renaming ((* +))
-    (* a b)))
+  (with-renaming ((* +)
+                  (+ *))
+    (* a b)
+    (+ a b)))
 
 (defconstant +new+ 0)
 (defconstant +frontier+ 1)
