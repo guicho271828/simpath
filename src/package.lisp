@@ -145,12 +145,23 @@
 (defun mate-zdd (input)
   (ematch input
     ((input :s start :t terminal :edges edges)
-     (let ((%edges (length edges))
-           (%nodes (max 1 (length (nodes input)))))
-       (labels ((m (v1 v2) (+ (* %nodes (min v1 v2)) (max v1 v2)))
-                (e (h)     (+ (* %nodes %nodes) h))
+     (let* ((%edges (length edges))
+            (%nodes (max 1 (length (nodes input))))
+            (%mates (/ (* %nodes (1+ %nodes)) 2)))
+       (labels ((m (v1 v2)
+                  (let ((v1 (min v1 v2))
+                        (v2 (max v1 v2)))
+                    ;;
+                    ;; 0
+                    ;; 1  2
+                    ;; 3  4  5
+                    ;; 6  7 [8] 9   (v1 = 2, v2 = 3)
+                    ;;  ↖
+                    ;;    3*4 /2
+                    (+ (* v2 (1+ v2) 1/2) v1)))
+                (e (h)     (+ %mates h))
                 (v (var)   (make-var 'zdd-node :index var)))
-         (with-manager (:initial-num-vars-z (+ (* %nodes %nodes) %edges))
+         (with-manager (:initial-num-vars-z (+ %mates %edges))
            (let ((f (zdd-set-of-emptyset))
                  ;; frontier := visited nodes / closed nodes
                  (states (make-array %nodes
@@ -199,6 +210,7 @@
                        (finally
                         (prune i))))
                (setf f (/ f (s (m start terminal)))))
+             (info)
              (zdd-count-minterm f))))))))
 
 (assert (= (print (time (mate-zdd (grid 2)))) 2))
