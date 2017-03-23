@@ -148,18 +148,29 @@
      (let* ((%edges (length edges))
             (%nodes (max 1 (length (nodes input))))
             (%mates (/ (* %nodes (1+ %nodes)) 2)))
-       (labels ((m (v1 v2)
+       (labels ((m1 (v1 v2)
+                  ;; 0
+                  ;; 1  2
+                  ;; 3  4  5
+                  ;; 6  7 [8] 9   (v1 = 2, v2 = 3)
+                  ;;  ↖
+                  ;;    3*4 /2
                   (let ((v1 (min v1 v2))
                         (v2 (max v1 v2)))
-                    ;;
-                    ;; 0
-                    ;; 1  2
-                    ;; 3  4  5
-                    ;; 6  7 [8] 9   (v1 = 2, v2 = 3)
-                    ;;  ↖
-                    ;;    3*4 /2
-                    (+ %edges (* v2 (1+ v2) 1/2) v1)))
-                (e (h)     h)
+                    (+ (* v2 (1+ v2) 1/2) v1)))
+                ;; 
+                ;; several candidates for variable ordering
+                ;; best/worst ratio is over x40
+                ;; 
+                ;; (m (v1 v2) (+ %edges (m1 v1 v2)))
+                ;; (m (v1 v2) (+ %edges (- %mates 1 (m1 v1 v2)))) ;worst
+                ;; (e (h)     h)
+                ;; (e (h)     (- %edges 1 h)) ;worst
+                ;; 
+                ;; (m (v1 v2) (m1 v1 v2))
+                (m (v1 v2) (- %mates 1 (m1 v1 v2))) ; best
+                ;; (e (h)     (+ %mates h))
+                (e (h)     (+ %mates (- %edges 1 h))) ; best
                 (v (var)   (make-var 'zdd-node :index var)))
          (with-manager (:initial-num-vars-z (+ %mates %edges))
            (let ((f (zdd-set-of-emptyset))
@@ -210,7 +221,6 @@
                        (finally
                         (prune i))))
                (setf f (/ f (s (m start terminal)))))
-             (info)
              (zdd-count-minterm f))))))))
 
 (assert (= (print (time (mate-zdd (grid 2)))) 2))
