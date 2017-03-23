@@ -42,7 +42,7 @@
            (let ((m (- n size -1)))
              (* -1 m m))))))
 
-(let ((size 5))
+(let ((size 2))
   (print
    (iter (with a = (make-array (list size size)))
          (for x below size)
@@ -51,40 +51,21 @@
          (finally (return a)))))
 
 (defun grid (size)
-  (flet ((node (x y)
-           ;; breadth-first from top-left to bottom-right
-           ;;   |  0  1  2  3  4
-           ;;---+---------------
-           ;; 0 |  0  1  3  6 10 ** **
-           ;; 1 |  2  4  7 11 15 **
-           ;; 2 |  5  8 12 16 19
-           ;; 3 |  9 13 17 20 22
-           ;; 4 | 14 18 21 23 24
-           ;;
-           (let ((n (+ x y)))
-             (if (< n size)
-                 (+ (* 1/2 n (1+ n))
-                    y)
-                 (+ (* 1/2 n (1+ n))
-                    y
-                    ;; adjust the missing cells (**)
-                    (let ((m (- n size -1)))
-                      (* -1 m m)))))))
-    (make-input
-     :s 0
-     :t (1- (* size size))
-     :edges
-     (coerce (iter outer
-                  (for x below size)
-                  (iter (for y below size)
-                        (in outer
-                            (unless (= x (1- size))
-                              (collect (cons (node x y) (node (1+ x) y))
-                                result-type vector))
-                            (unless (= y (1- size))
-                              (collect (cons (node x y) (node x (1+ y)))
-                                result-type vector)))))
-             '(array edge)))))
+  (make-input
+   :s 0
+   :t (1- (* size size))
+   :edges
+   (coerce (iter outer
+                 (for y below size)
+                 (iter (for x below size)
+                       (in outer
+                           (unless (= x (1- size))
+                             (collect (cons (grid-node size x y) (grid-node size (1+ x) y))
+                               result-type vector))
+                           (unless (= y (1- size))
+                             (collect (cons (grid-node size x y) (grid-node size x (1+ y)))
+                               result-type vector)))))
+           '(array edge))))
 
 (defun nodes (input)
   (match input
@@ -129,9 +110,6 @@
     (* a b)
     (+ a b)))
 
-(defconstant +new+ 0)
-(defconstant +frontier+ 1)
-(defconstant +closed+ 2)
 
 (defun dump (path name f)
   (cl-cudd.baseapi:dump-dot
@@ -161,21 +139,17 @@
                 ',last-form (list ,last))
          ,last))))
 
+(defconstant +new+ 0)
+(defconstant +frontier+ 1)
+(defconstant +closed+ 2)
 (defun mate-zdd (input)
   (ematch input
     ((input :s start :t terminal :edges edges)
      (let ((%edges (length edges))
-           (%nodes (length (nodes input))))
-       (labels ((mi (v1 v2) (+ (* %nodes v1) v2))
-                (ei (h)     (+ (* %nodes %nodes) h))
-                (m (v1 v2)
-                  ;; (zdd-singleton (mi v1 v2))
-                  (zdd-change (zdd-set-of-emptyset)
-                              (mi v1 v2)))
-                (e (h)
-                  ;; (zdd-singleton (ei h))
-                  (zdd-change (zdd-set-of-emptyset)
-                              (ei h))))
+           (%nodes (max 1 (length (nodes input)))))
+       (labels ((m (v1 v2) (+ (* %nodes v1) v2))
+                (e (h)     (+ (* %nodes %nodes) h))
+                (v (var)   (make-var 'zdd-node :index var)))
          (with-manager (:initial-num-vars-z (+ (* %nodes %nodes) %edges))
            (let ((f (zdd-set-of-emptyset))
                  ;; frontier := visited nodes / closed nodes
@@ -191,40 +165,49 @@
                              (off zdd-subset-0)
                              (% zdd-remainder-unate)
                              (_+ +)
-                             (_* *))
+                             (_* *)
+                             (s zdd-singleton))
                (iter (for i below %nodes)
-                     #+wrong
-                     (setf f (! f (_+ (_* %nodes i) i)))
-                     #+wrong
-                     (setf f (* f (zdd-singleton (mi i i))))
-                     (setf f (* f (m i i))))
-               ;; (break+ (draw f))
-               (iter (for (i . j) in-vector edges with-index h)
-                     (for p previous i)
-                     (unless (first-iteration-p)
-                       (when (/= i p)  ; i.e., i is a new node
-                         (setf (aref states p) +closed+)
-                         (iter (for s in-vector states with-index k)
-                               (unless (= s +frontier+) (next-iteration))
-                               (setf f (% f (m p k))))
-                         (setf f (+ (/ f (m p p))
-                                    (% f (m p p))))))
-                     (iter (for s in-vector states with-index k)
-                           (unless (= s +frontier+) (next-iteration))
-                           (iter (for s in-vector states with-index l from (1+ k))
-                                 (unless (= s +frontier+) (next-iteration))
-                                 (setf f
-                                       (+ f (-> f
-                                              (/ (m i k))
-                                              (/ (m j l))
-                                              (* (e h))
-                                              (* (m k l)))))
-                                 (break+ (draw f) h 1)))
-                     ;; (break+ (draw f) h 1)
-                     ;; (break+ (draw f) h 2)
-                     (setf (aref states i) +frontier+)
-                     (setf (aref states j) +frontier+))
+                     (setf f (* f (s (m i i)))))
+               ;; initially there is only one element: {{m00,m11,m22,m33}}
                (break+ (draw f))
-               (setf f (/ f (m start terminal))))
+               (flet ((prune (p)
+                        (setf (aref states p) +closed+)
+                        (print (list :closed p))
+                        (when (and (/= p start)
+                                   (/= p terminal))
+                          (iter (for st in-vector states with-index k)
+                                (when (= st +frontier+)
+                                  ;; (when (/= p k))
+                                  ;; ^^^^ doesnt happen, already closed
+                                  (setf f (% f (s (m p k)))))))
+                        (setf f (+ (/ f (s (m p p)))
+                                   #+nil (% f (s (m p p)))
+                                   (off f (m p p))))))
+                 (iter (for (i . j) in-vector edges with-index h)
+                       (for p previous i)
+                       (unless (first-iteration-p)
+                         (when (/= i p)  ; i.e., i is a new node
+                           (prune p)))
+                       (break+ (draw f) states (1- h) :after-pruning)
+                       (setf (aref states i) +frontier+)
+                       (setf (aref states j) +frontier+)
+                       (iter (for st in-vector states with-index k)
+                             (unless (= st +frontier+) (next-iteration))
+                             (iter (for st in-vector states with-index l)
+                                   (unless (= st +frontier+) (next-iteration))
+                                   (setf f
+                                         (+ f (-> f
+                                                (/ (s (m i k)))
+                                                (/ (s (m j l)))
+                                                (* (s (e h)))
+                                                (* (s (m k l))))))))
+                       (break+ (draw f) states h)
+                       (finally
+                        (prune i))))
+               (draw f)
+               (setf f (/ f (s (m start terminal)))))
              (zdd-count-minterm f))))))))
 
+;; (print (= 2 (mate-zdd (grid 2))))
+;; (print (= 12 (mate-zdd (grid 2))))
