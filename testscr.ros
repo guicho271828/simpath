@@ -4,20 +4,8 @@
 exec ros -Q -- $0 "$@"
 |#
 
-(ql:quickload :fiveam)
-
 (defun main (&rest argv)
   (declare (ignorable argv))
-  (uiop:quit (if (handler-case
-                     (progn
-                       (asdf:load-system :simpath.test)
-                       (eval
- (read-from-string
-  "(let ((res (5am:run :simpath)))
-     (explain! res)
-     (every #'fiveam::TEST-PASSED-P res))"))
-)
-                   (serious-condition (c)
-                     (describe c)
-                     (uiop:quit 2)))
-                 0 1)))
+  (ql:quickload :cffi-grovel)
+  (ql:quickload :simpath.test)
+  (asdf:test-system :simpath.test))
