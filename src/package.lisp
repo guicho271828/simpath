@@ -158,8 +158,8 @@
                     ;; 6  7 [8] 9   (v1 = 2, v2 = 3)
                     ;;  ↖
                     ;;    3*4 /2
-                    (+ (* v2 (1+ v2) 1/2) v1)))
-                (e (h)     (+ %mates h))
+                    (+ %edges (* v2 (1+ v2) 1/2) v1)))
+                (e (h)     h)
                 (v (var)   (make-var 'zdd-node :index var)))
          (with-manager (:initial-num-vars-z (+ %mates %edges))
            (let ((f (zdd-set-of-emptyset))
