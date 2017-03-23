@@ -5,6 +5,18 @@ D. E. Knuth, The Art of Computer Programming:
 Bitwise Tricks & Techniques; Binary Decision Dia-
 grams, Vol. 4, fascicle 1, Addison-Wesley, 2009.
 
+R. Yoshinaka, T. Saitoh, J. Kawahara, K. Tsuruma,
+H. Iwashita, and S. Minato, Finding all solutions and
+instances of numberlink and slitherlink by ZDDs,
+
+BDD/ZDDを用いたグラフ列挙索引化技法
+湊 真一
+
+ZDD によるパスの列挙
+川原 純, 斎藤 寿樹, 鈴木 拡, 湊 真一, 吉仲 亮
+数理解析研究所講究録
+第 1744 巻 2011 年 35-41
+
 ## Usage
 
 
