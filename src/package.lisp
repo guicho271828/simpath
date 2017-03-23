@@ -166,22 +166,20 @@
                              (_+ +)
                              (_* *)
                              (s zdd-singleton))
+               ;; initially there is only one element: {{m00,m11,m22,m33}}
                (iter (for i below %nodes)
                      (setf f (* f (s (m i i)))))
-               ;; initially there is only one element: {{m00,m11,m22,m33}}
                (flet ((prune (p)
                         (when (and (/= p start)
                                    (/= p terminal))
                           (setf (aref states p) +closed+)
-                          (print (list :closed p))
                           (iter (for st in-vector states with-index k)
-                                (when (and (= st +frontier+) (/= k start) (/= k terminal))
+                                (when (and (= st +frontier+))
                                   ;; (when (/= p k))
                                   ;; ^^^^ doesnt happen, already closed
                                   (setf f (% f (s (m p k))))))
                           (setf f (+ (/ f (s (m p p)))
-                                     #+nil (% f (s (m p p)))
-                                     (off f (m p p)))))))
+                                     (% f (s (m p p))))))))
                  (iter (for (i . j) in-vector edges with-index h)
                        (for p previous i)
                        (unless (first-iteration-p)
@@ -193,19 +191,17 @@
                              (unless (= st +frontier+) (next-iteration))
                              (iter (for st in-vector states with-index l)
                                    (unless (= st +frontier+) (next-iteration))
-                                   (setf f
-                                         (-> f
-                                           (+ (-> f
-                                                (/ (s (m i k)))
-                                                (/ (s (m j l)))
-                                                (* (s (e h)))
-                                                (* (s (m k l)))))))))
+                                   (setf f (+ f (-> f
+                                                  (/ (s (m i k)))
+                                                  (/ (s (m j l)))
+                                                  (* (s (e h)))
+                                                  (* (s (m k l))))))))
                        (finally
                         (prune i))))
                (setf f (/ f (s (m start terminal)))))
              (zdd-count-minterm f))))))))
 
-(assert (= (mate-zdd (grid 2)) 2))
-(assert (= (mate-zdd (grid 3)) 12))
-(assert (= (mate-zdd (grid 4)) 184))
-(assert (= (mate-zdd (grid 5)) 8512))
+(assert (= (print (time (mate-zdd (grid 2)))) 2))
+(assert (= (print (time (mate-zdd (grid 3)))) 12))
+(assert (= (print (time (mate-zdd (grid 4)))) 184))
+(assert (= (print (time (mate-zdd (grid 5)))) 8512))
