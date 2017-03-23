@@ -147,7 +147,7 @@
     ((input :s start :t terminal :edges edges)
      (let ((%edges (length edges))
            (%nodes (max 1 (length (nodes input)))))
-       (labels ((m (v1 v2) (+ (* %nodes v1) v2))
+       (labels ((m (v1 v2) (+ (* %nodes (min v1 v2)) (max v1 v2)))
                 (e (h)     (+ (* %nodes %nodes) h))
                 (v (var)   (make-var 'zdd-node :index var)))
          (with-manager (:initial-num-vars-z (+ (* %nodes %nodes) %edges))
@@ -156,7 +156,6 @@
                  (states (make-array %nodes
                                      :element-type 'fixnum
                                      :initial-element +new+)))
-             ;; (setf (aref states start) +frontier+)
              (with-renaming ((+ zdd-union)
                              (* zdd-product-unate)
                              (/ zdd-divide-unate)
@@ -170,26 +169,24 @@
                (iter (for i below %nodes)
                      (setf f (* f (s (m i i)))))
                ;; initially there is only one element: {{m00,m11,m22,m33}}
-               (break+ (draw f))
                (flet ((prune (p)
-                        (setf (aref states p) +closed+)
-                        (print (list :closed p))
                         (when (and (/= p start)
                                    (/= p terminal))
+                          (setf (aref states p) +closed+)
+                          (print (list :closed p))
                           (iter (for st in-vector states with-index k)
-                                (when (= st +frontier+)
+                                (when (and (= st +frontier+) (/= k start) (/= k terminal))
                                   ;; (when (/= p k))
                                   ;; ^^^^ doesnt happen, already closed
-                                  (setf f (% f (s (m p k)))))))
-                        (setf f (+ (/ f (s (m p p)))
-                                   #+nil (% f (s (m p p)))
-                                   (off f (m p p))))))
+                                  (setf f (% f (s (m p k))))))
+                          (setf f (+ (/ f (s (m p p)))
+                                     #+nil (% f (s (m p p)))
+                                     (off f (m p p)))))))
                  (iter (for (i . j) in-vector edges with-index h)
                        (for p previous i)
                        (unless (first-iteration-p)
                          (when (/= i p)  ; i.e., i is a new node
                            (prune p)))
-                       (break+ (draw f) states (1- h) :after-pruning)
                        (setf (aref states i) +frontier+)
                        (setf (aref states j) +frontier+)
                        (iter (for st in-vector states with-index k)
@@ -197,17 +194,18 @@
                              (iter (for st in-vector states with-index l)
                                    (unless (= st +frontier+) (next-iteration))
                                    (setf f
-                                         (+ f (-> f
+                                         (-> f
+                                           (+ (-> f
                                                 (/ (s (m i k)))
                                                 (/ (s (m j l)))
                                                 (* (s (e h)))
-                                                (* (s (m k l))))))))
-                       (break+ (draw f) states h)
+                                                (* (s (m k l)))))))))
                        (finally
                         (prune i))))
-               (draw f)
                (setf f (/ f (s (m start terminal)))))
              (zdd-count-minterm f))))))))
 
-;; (print (= 2 (mate-zdd (grid 2))))
-;; (print (= 12 (mate-zdd (grid 2))))
+(assert (= (mate-zdd (grid 2)) 2))
+(assert (= (mate-zdd (grid 3)) 12))
+(assert (= (mate-zdd (grid 4)) 184))
+(assert (= (mate-zdd (grid 5)) 8512))
