@@ -207,9 +207,9 @@
                                   (progress #\p)
                                   ;; (when (/= p k))
                                   ;; ^^^^ doesnt happen, already closed
-                                  (setf f (% f (s (m p k))))))
-                          (setf f (+ (/ f (s (m p p)))
-                                     (% f (s (m p p))))))))
+                                  (setf f (off f (m p k)))))
+                          (setf f (+ (on f (m p p))
+                                     (off f (m p p)))))))
                  (iter (for (i . j) in-vector edges with-index h)
                        (for p previous i)
                        (unless (first-iteration-p)
@@ -223,15 +223,16 @@
                              (iter (for st in-vector states with-index l)
                                    (unless (= st +frontier+) (next-iteration))
                                    (progress)
-                                   (setf f (+ f (-> f
-                                                  (/ (s (m i k)))
-                                                  (/ (s (m j l)))
-                                                  (* (s (e h)))
-                                                  (* (s (m k l))))))))
+                                   (setf f (+ f
+                                              (-> f
+                                                (on (m i k))
+                                                (on (m j l))
+                                                (* (s (e h)))
+                                                (* (s (m k l))))))))
                        (finally
                         (prune i))))
                (print :step2)
-               (setf f (/ f (s (m start terminal)))))
+               (setf f (on f (m start terminal))))
              (print :step3)
              (zdd-count-minterm f))))))))
 
