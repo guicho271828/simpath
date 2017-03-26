@@ -139,6 +139,11 @@
                 ',last-form (list ,last))
          ,last))))
 
+(defun progress (&optional (char #\.))
+  (write-char char)
+  ;; (finish-output)
+  )
+
 (defconstant +new+ 0)
 (defconstant +frontier+ 1)
 (defconstant +closed+ 2)
@@ -189,14 +194,17 @@
                              (_* *)
                              (s zdd-singleton))
                ;; initially there is only one element: {{m00,m11,m22,m33}}
+               (print :step0)
                (iter (for i below %nodes)
                      (setf f (* f (s (m i i)))))
+               (print :step1)
                (flet ((prune (p)
                         (when (and (/= p start)
                                    (/= p terminal))
                           (setf (aref states p) +closed+)
                           (iter (for st in-vector states with-index k)
                                 (when (and (= st +frontier+))
+                                  (progress #\p)
                                   ;; (when (/= p k))
                                   ;; ^^^^ doesnt happen, already closed
                                   (setf f (% f (s (m p k))))))
@@ -207,12 +215,14 @@
                        (unless (first-iteration-p)
                          (when (/= i p)  ; i.e., i is a new node
                            (prune p)))
+                       (format t "~%~ath/~ath edge" h %edges)
                        (setf (aref states i) +frontier+)
                        (setf (aref states j) +frontier+)
                        (iter (for st in-vector states with-index k)
                              (unless (= st +frontier+) (next-iteration))
                              (iter (for st in-vector states with-index l)
                                    (unless (= st +frontier+) (next-iteration))
+                                   (progress)
                                    (setf f (+ f (-> f
                                                   (/ (s (m i k)))
                                                   (/ (s (m j l)))
@@ -220,7 +230,9 @@
                                                   (* (s (m k l))))))))
                        (finally
                         (prune i))))
+               (print :step2)
                (setf f (/ f (s (m start terminal)))))
+             (print :step3)
              (zdd-count-minterm f))))))))
 
 (assert (= (print (time (mate-zdd (grid 2)))) 2))
