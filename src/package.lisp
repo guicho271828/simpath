@@ -183,6 +183,8 @@
            ;; (set-zdd-variable-group :mtr-default :from %mates :size %edges)
            ;; (print (dump-zdd-variable-group-hierarchy))
            ;; (zdd-enable-reordering :cudd-reorder-sift)
+           (push (lambda (mode) (format t "~&gc happening for ~a!" mode))
+                 CL-CUDD:*BEFORE-GC-HOOK*)
            (let ((f (zdd-set-of-emptyset))
                  ;; frontier := visited nodes / closed nodes
                  (states (make-array %nodes
