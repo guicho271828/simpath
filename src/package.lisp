@@ -177,7 +177,8 @@
                 ;; (e (h)     (+ %mates h))
                 (e (h)     (+ %mates (- %edges 1 h))) ; best
                 (v (var)   (make-var 'zdd-node :index var)))
-         (with-manager (:initial-num-vars-z (+ %mates %edges))
+         (with-manager (:initial-num-vars-z (+ %mates %edges)
+                                            :stack-allocated t)
            ;; (set-zdd-variable-group :mtr-default :from 0 :size %mates)
            ;; (set-zdd-variable-group :mtr-default :from %mates :size %edges)
            ;; (print (dump-zdd-variable-group-hierarchy))
