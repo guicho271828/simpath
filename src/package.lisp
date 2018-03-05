@@ -178,13 +178,17 @@
                 (e (h)     (+ %mates (- %edges 1 h))) ; best
                 (v (var)   (make-var 'zdd-node :index var)))
          (with-manager (:initial-num-vars-z (+ %mates %edges)
+                                            :max-memory 1000000 ; 1Mbyte
                                             :stack-allocated t)
+           (cl-cudd:info)
            ;; (set-zdd-variable-group :mtr-default :from 0 :size %mates)
            ;; (set-zdd-variable-group :mtr-default :from %mates :size %edges)
            ;; (print (dump-zdd-variable-group-hierarchy))
-           ;; (zdd-enable-reordering :cudd-reorder-sift)
+           (zdd-enable-reordering :cudd-reorder-sift)
            (push (lambda (mode) (format t "~&gc happening for ~a!" mode))
-                 CL-CUDD:*BEFORE-GC-HOOK*)
+                 cl-cudd:*before-gc-hook*)
+           (push (lambda (mode) (format t "~&reordering happening for ~a!" mode))
+                 cl-cudd:*before-reordering-hook*)
            (let ((f (zdd-set-of-emptyset))
                  ;; frontier := visited nodes / closed nodes
                  (states (make-array %nodes
@@ -241,6 +245,7 @@
                (print :step2)
                (setf f (on f (m start terminal))))
              (print :step3)
+             (cl-cudd:info)
              (zdd-count-minterm f))))))))
 
 (assert (= (print (time (mate-zdd (grid 2)))) 2))
